@@ -1,0 +1,3 @@
+# If you keep this folder in git, keep it in a PRIVATE repository.
+__pycache__/
+*.pyc

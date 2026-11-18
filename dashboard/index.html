@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My tree</title>
+<!--
+  This page is yours. It is one file on purpose: change it freely.
+
+  - The colours are right below; TITLE is the first line of the script (search for "yours to change").
+  - A tab is: a button in <nav id="tabs">, a <section id="view-NAME">, and an entry in VIEWS
+    (at the bottom of the script) that says how to draw it.
+  - The data comes from scripts/work_tree.py: /api/tree, /api/graph, /api/activity.
+    To add a chart, add an endpoint there and a view here (copy the "activity" one).
+-->
+<style>
+  :root {
+    --bg: #0d1218; --surface: #121a23; --raise: #182330; --hover: #1b2734; --line: #223040; --rule: #1a2531;
+    --text: #e4ebf2; --soft: #a3b1c0; --dim: #74849a; --faint: #4f5f72;
+    --doing: #5aa2ff; --you: #f2a93b; --blocked: #f0607a; --idea: #b79cf5; --parked: #6b7a8d; --done: #3ccf7e; --dropped: #4d5868;
+    --focus: #8fc0ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 20px 16px 64px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.01em; }
+  nav { display: flex; gap: 4px; margin-left: 12px; }
+  .live { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); font-size: 12px; margin-left: auto; }
+  .live i { width: 7px; height: 7px; border-radius: 50%; background: var(--done); }
+  .live.off i { background: var(--blocked); }
+  .tab { display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 13px; border: 1px solid transparent; border-radius: 9px; background: none; color: var(--dim); cursor: pointer; font-weight: 600; }
+  .tab:hover { color: var(--text); background: var(--surface); }
+  .tab[aria-selected="true"] { background: var(--raise); color: var(--text); border-color: var(--line); }
+  .tab .n { font-weight: 500; color: var(--faint); font-size: 12px; }
+  .tab .d { width: 8px; height: 8px; border-radius: 50%; }
+  .bar { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .bar input[type=search] { margin-left: auto; height: 34px; width: 220px; max-width: 100%; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); }
+  .card { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--hover); }
+  tbody tr.sel { background: var(--raise); }
+  .name { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .name b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .name.box b { font-weight: 700; }
+  .chev { width: 20px; height: 20px; flex: none; border: 0; background: none; color: var(--dim); cursor: pointer; border-radius: 5px; font-size: 12px; }
+  .chev:hover { background: var(--line); color: var(--text); }
+  .chev.none { visibility: hidden; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; border: 1px solid; }
+  .pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .roll { color: var(--dim); font-size: 12px; white-space: nowrap; }
+  .roll span { margin-right: 8px; }
+  .muted { color: var(--dim); }
+  .next { color: var(--soft); max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tasks span { margin-right: 8px; white-space: nowrap; }
+  .empty { padding: 28px 16px; color: var(--dim); text-align: center; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .cols.open { grid-template-columns: minmax(0, 1fr) 380px; }
+  aside { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 16px; align-self: start; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+  aside h2 { margin: 0 0 6px; font-size: 17px; }
+  aside h3 { margin: 16px 0 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+  aside p { margin: 0 0 8px; color: var(--soft); }
+  aside ul { margin: 0 0 8px; padding-left: 18px; color: var(--soft); }
+  aside .x { float: right; border: 0; background: none; color: var(--dim); cursor: pointer; font-size: 18px; }
+  aside code { background: var(--raise); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .task { display: flex; gap: 8px; padding: 3px 0; color: var(--soft); }
+  .task.done { color: var(--faint); text-decoration: line-through; }
+  h4 { margin: 28px 0 10px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+  .chore { padding: 10px 12px; border-bottom: 1px solid var(--rule); }
+  .chore:last-child { border-bottom: 0; }
+  .chore .t { display: flex; gap: 10px; align-items: center; font-weight: 600; }
+  .chore .w { color: var(--dim); font-size: 13px; margin-top: 2px; }
+  #graphbox { position: relative; height: min(72vh, 760px); }
+  #graph { width: 100%; height: 100%; display: block; cursor: grab; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; color: var(--dim); font-size: 12px; margin: 10px 2px; }
+  .legend label { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+  .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .legend .ln { width: 22px; height: 0; border-top: 2px solid var(--soft); border-radius: 0; }
+  .chart { padding: 16px; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .note { color: var(--dim); font-size: 13px; margin: 0 2px 12px; }
+  @media (max-width: 860px) { .cols.open { grid-template-columns: minmax(0, 1fr); } aside { position: static; max-height: none; } .hide-s { display: none; } nav { margin-left: 0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title"></h1>
+    <nav id="tabs" role="tablist">
+      <button class="tab" data-view="tree">Tree</button>
+      <button class="tab" data-view="graph">Graph</button>
+      <button class="tab" data-view="activity">Activity</button>
+    </nav>
+    <span class="live" id="live"><i></i><span>live</span></span>
+  </header>
+
+  <div class="cols" id="cols">
+    <main>
+      <section id="view-tree">
+        <div class="bar" id="filters"></div>
+        <div class="card"><table>
+          <thead><tr><th>Thread</th><th>Status</th><th class="hide-s">To-dos</th><th class="hide-s">Last worked on</th><th class="hide-s">Next</th></tr></thead>
+          <tbody id="rows"></tbody>
+        </table></div>
+        <h4>Chores</h4>
+        <div class="card" id="chores"></div>
+      </section>
+
+      <section id="view-graph" hidden>
+        <p class="note">Every thread is a dot. Lines show where it belongs, where the idea came from, and which threads mention each other. Drag a dot, scroll to zoom, click for details.</p>
+        <div class="card" id="graphbox"><canvas id="graph"></canvas></div>
+        <div class="legend" id="glegend"></div>
+      </section>
+
+      <section id="view-activity" hidden>
+        <p class="note">Changelog entries per week, by top node. It shows where your attention went, not how much you got done.</p>
+        <div class="card chart" id="activity"></div>
+        <div class="legend" id="alegend"></div>
+      </section>
+    </main>
+    <aside id="panel" hidden></aside>
+  </div>
+</div>
+
+<script>
+"use strict";
+// ---------------------------------------------------------------- yours to change
+const TITLE = "My tree";
+const STATUS = {            // order = sort order in the tree
+  "doing":       { label: "Doing",          color: "var(--doing)" },
+  "waiting-you": { label: "Waiting on you", color: "var(--you)" },
+  "blocked":     { label: "Blocked",        color: "var(--blocked)" },
+  "idea":        { label: "Idea",           color: "var(--idea)" },
+  "parked":      { label: "Parked",         color: "var(--parked)" },
+  "done":        { label: "Done",           color: "var(--done)" },
+  "dropped":     { label: "Dropped",        color: "var(--dropped)" },
+};
+const FILTERS = [           // the buttons above the tree
+  { id: "active", label: "Working on",     test: n => ["doing", "waiting-you", "blocked", "idea"].includes(n.status) },
+  { id: "you",    label: "Waiting on you", test: n => n.status === "waiting-you" || n.tasks.some(t => t.you && !t.done) },
+  { id: "parked", label: "Parked",         test: n => n.status === "parked" },
+  { id: "done",   label: "Done",           test: n => n.status === "done" || n.status === "dropped" },
+  { id: "all",    label: "All",            test: n => true },
+];
+const AREA_COLORS = ["#5aa2ff", "#3ccf7e", "#f2a93b", "#b79cf5", "#f0607a", "#4fd1c5", "#e8d44d", "#9aa8b8"];
+const POLL_MS = 5000;
+// ----------------------------------------------------------------
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const cssVar = v => v.startsWith("var(") ? getComputedStyle(document.documentElement).getPropertyValue(v.slice(4, -1)).trim() : v;
+
+let DATA = { nodes: [], chores: [], no_header: [] };
+let BY = {}, KIDS = {}, ROOTS = [];
+let view = store.get("view", "tree"), filter = store.get("filter", "active"), query = "", selected = null;
+let openSet = new Set(store.get("open", [])), closedSet = new Set(store.get("closed", []));
+
+function index() {
+  BY = {}; KIDS = {}; ROOTS = [];
+  for (const n of DATA.nodes) BY[n.slug] = n;
+  for (const n of DATA.nodes) {
+    if (n.parent && BY[n.parent] && n.parent !== n.slug) (KIDS[n.parent] = KIDS[n.parent] || []).push(n);
+    else ROOTS.push(n);
+  }
+}
+const kids = n => KIDS[n.slug] || [];
+const isBox = n => !n.status;                      // a container: Work, Health, ...
+function descendants(n, out = []) { for (const k of kids(n)) { out.push(k); descendants(k, out); } return out; }
+function topOf(n) { let c = n, guard = 0; while (c.parent && BY[c.parent] && guard++ < 50) c = BY[c.parent]; return c; }
+const order = s => { const i = Object.keys(STATUS).indexOf(s); return i < 0 ? -1 : i; };
+const sortKids = a => a.slice().sort((x, y) => order(x.status) - order(y.status) || (x.name || x.slug).localeCompare(y.name || y.slug));
+function fmtLast(s) {
+  if (!s) return "";
+  const d = new Date(s.replace(" ", "T")), days = Math.floor((Date.now() - d) / 864e5);
+  if (isNaN(d)) return s;
+  return days <= 0 ? "today " + s.slice(11) : days === 1 ? "yesterday" : days < 30 ? days + " days ago" : s.slice(0, 10);
+}
+function pill(status) {
+  const st = STATUS[status];
+  if (!st) return "";
+  return `<span class="pill" style="color:${st.color};border-color:color-mix(in srgb, ${st.color} 40%, transparent)"><i></i>${esc(st.label)}</span>`;
+}
+function md(text) {                                 // a small markdown reader for the summary
+  const inline = s => esc(s).replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2").replace(/\[\[([^\]]+)\]\]/g, (m, a) => a.split("/").filter(x => x !== "thread").pop())
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  let html = "", list = false;
+  for (const raw of text.split("\n")) {
+    const line = raw.trim(), li = line.match(/^[-*]\s+(.*)$/);
+    if (li) { if (!list) { html += "<ul>"; list = true; } html += "<li>" + inline(li[1]) + "</li>"; continue; }
+    if (list) { html += "</ul>"; list = false; }
+    if (line) html += "<p>" + inline(line) + "</p>";
+  }
+  return html + (list ? "</ul>" : "");
+}
+
+// ---------------------------------------------------------------- tree
+function matches(n) {
+  const f = FILTERS.find(x => x.id === filter) || FILTERS[0];
+  if (isBox(n)) return false;
+  if (!f.test(n)) return false;
+  if (!query) return true;
+  return ((n.name || "") + " " + n.slug + " " + (n.why || "") + " " + (n.next || "")).toLowerCase().includes(query);
+}
+function visibleSet() {
+  const keep = new Set();
+  for (const n of DATA.nodes) if (matches(n)) { let c = n, g = 0; while (c && g++ < 50) { keep.add(c.slug); c = BY[c.parent]; } }
+  if (filter === "all" && !query) for (const n of DATA.nodes) keep.add(n.slug);
+  if (!query) for (const n of DATA.nodes) if (isBox(n) && n.folder === "open") keep.add(n.slug);   // an area shows even when empty
+  return keep;
+}
+function isOpen(n, keep) {
+  if (query) return true;
+  if (closedSet.has(n.slug)) return false;
+  if (openSet.has(n.slug)) return true;
+  return kids(n).some(k => keep.has(k.slug));       // open by default when something below shows
+}
+function renderFilters() {
+  $("filters").innerHTML = FILTERS.map(f => {
+    const c = DATA.nodes.filter(n => !isBox(n) && f.test(n)).length;
+    return `<button class="tab" data-f="${f.id}" aria-selected="${f.id === filter}">${esc(f.label)} <span class="n">${c}</span></button>`;
+  }).join("") + `<input type="search" id="q" placeholder="Search threads" value="${esc(query)}">`;
+  for (const b of $("filters").querySelectorAll("[data-f]")) b.onclick = () => { filter = b.dataset.f; store.set("filter", filter); renderTree(); };
+  $("q").oninput = e => { query = e.target.value.trim().toLowerCase(); renderRows(); };
+}
+function rollup(n) {
+  const c = {};
+  for (const d of descendants(n)) if (!isBox(d)) c[d.status] = (c[d.status] || 0) + 1;
+  return Object.keys(STATUS).filter(s => c[s]).map(s => `<span style="color:${STATUS[s].color}">${c[s]} ${esc(STATUS[s].label.toLowerCase())}</span>`).join("");
+}
+function taskCell(n) {
+  const open = n.tasks.filter(t => !t.done && !t.you).length, you = n.tasks.filter(t => !t.done && t.you).length, done = n.tasks.filter(t => t.done).length;
+  if (!n.tasks.length) return "";
+  return (open ? `<span>&#9675; ${open}</span>` : "") + (you ? `<span style="color:var(--you)">&#9203; ${you}</span>` : "") + (done ? `<span class="muted">&#10003; ${done}</span>` : "");
+}
+function renderRows() {
+  const keep = visibleSet(), rows = [];
+  const walk = (n, depth) => {
+    if (!keep.has(n.slug)) return;
+    const ch = sortKids(kids(n)).filter(k => keep.has(k.slug)), open = isOpen(n, keep);
+    rows.push(`<tr data-slug="${esc(n.slug)}" class="${n.slug === selected ? "sel" : ""}">
+      <td><div class="name ${isBox(n) ? "box" : ""}" style="padding-left:${depth * 20}px">
+        <button class="chev ${ch.length ? "" : "none"}" data-t="${esc(n.slug)}" aria-label="open or close">${open ? "&#9662;" : "&#9656;"}</button>
+        <b>${esc(n.name || n.slug)}</b></div></td>
+      <td>${isBox(n) ? `<span class="roll">${rollup(n)}</span>` : pill(n.status)}</td>
+      <td class="tasks hide-s">${isBox(n) ? "" : taskCell(n)}</td>
+      <td class="muted hide-s">${esc(fmtLast(n.last))}</td>
+      <td class="hide-s"><div class="next" title="${esc(n.next)}">${esc(n.next)}</div></td></tr>`);
+    if (open) for (const k of ch) walk(k, depth + 1);
+  };
+  for (const r of sortKids(ROOTS).sort((a, b) => isBox(b) - isBox(a))) walk(r, 0);
+  $("rows").innerHTML = rows.join("") || `<tr><td colspan="5" class="empty">${DATA.nodes.length ? "Nothing here. Try another filter." : "No threads yet. Ask your assistant to open the first one."}</td></tr>`;
+  for (const tr of $("rows").querySelectorAll("tr[data-slug]")) tr.onclick = () => select(tr.dataset.slug);
+  for (const b of $("rows").querySelectorAll(".chev")) b.onclick = e => {
+    e.stopPropagation();
+    const s = b.dataset.t, n = BY[s], nowOpen = isOpen(n, keep);
+    if (nowOpen) { closedSet.add(s); openSet.delete(s); } else { openSet.add(s); closedSet.delete(s); }
+    store.set("open", [...openSet]); store.set("closed", [...closedSet]); renderRows();
+  };
+}
+function renderChores() {
+  const rank = { "waiting-you": 0, "doing": 1, "todo": 2, "done": 3 }, col = { "waiting-you": "var(--you)", "doing": "var(--doing)", "todo": "var(--idea)", "done": "var(--done)" };
+  const list = DATA.chores.slice().sort((a, b) => rank[a.status] - rank[b.status]);
+  $("chores").innerHTML = list.map(c => `<div class="chore"><div class="t"><span class="pill" style="color:${col[c.status]};border-color:color-mix(in srgb, ${col[c.status]} 40%, transparent)"><i></i>${esc(c.status)}</span>${esc(c.title)}</div>
+    ${c.why ? `<div class="w">${esc(c.why)}</div>` : ""}</div>`).join("") || `<div class="empty">No chores. Small things that don't deserve a thread go in threads/chores.md.</div>`;
+}
+function renderTree() { renderFilters(); renderRows(); renderChores(); }
+
+// ---------------------------------------------------------------- details panel
+function select(slug) {
+  selected = selected === slug ? null : slug;
+  renderPanel(); if (view === "tree") renderRows();
+}
+function renderPanel() {
+  const n = selected && BY[selected], p = $("panel");
+  $("cols").classList.toggle("open", !!n);
+  p.hidden = !n;
+  if (!n) return;
+  const trail = []; let c = BY[n.parent], g = 0; while (c && g++ < 50) { trail.unshift(c.name || c.slug); c = BY[c.parent]; }
+  p.innerHTML = `<button class="x" aria-label="close">&times;</button>
+    <div class="muted" style="font-size:12px">${esc(trail.join(" / "))}</div>
+    <h2>${esc(n.name || n.slug)}</h2>
+    <div>${isBox(n) ? `<span class="roll">${rollup(n)}</span>` : pill(n.status)}</div>
+    ${n.why ? `<h3>Why</h3><p>${esc(n.why)}</p>` : ""}
+    ${n.next ? `<h3>Next</h3><p>${esc(n.next)}</p>` : ""}
+    ${n.summary ? `<h3>Summary</h3>${md(n.summary)}` : ""}
+    ${n.tasks.length ? `<h3>Tasks</h3>` + n.tasks.map(t => `<div class="task ${t.done ? "done" : ""}"><span>${t.done ? "&#10003;" : t.you ? "&#9203;" : "&#9675;"}</span><span>${esc(t.t)}</span></div>`).join("") : ""}
+    ${n.origin && BY[n.origin] ? `<h3>Came from</h3><p>${esc(BY[n.origin].name || n.origin)}</p>` : ""}
+    <h3>File</h3><p><code>${esc(n.path)}</code></p>
+    <p class="muted" style="font-size:12px">${n.opened ? "opened " + esc(n.opened) : ""}${n.closed ? " · closed " + esc(n.closed) : ""}${n.last ? " · last worked on " + esc(n.last) : ""}</p>`;
+  p.querySelector(".x").onclick = () => select(n.slug);
+}
+
+// ---------------------------------------------------------------- graph
+const G = { nodes: [], edges: [], pos: {}, k: 1, ox: 0, oy: 0, heat: 1, hover: null, drag: null, pan: null, show: store.get("gshow", { parent: true, origin: true, link: true, done: false }) };
+function graphData() {
+  const showDone = G.show.done, ids = new Set();
+  G.nodes = DATA.nodes.filter(n => showDone || (n.status !== "done" && n.status !== "dropped")).map(n => {
+    ids.add(n.slug);
+    if (!G.pos[n.slug]) { const a = Math.random() * 6.283, r = 80 + Math.random() * 220; G.pos[n.slug] = { x: Math.cos(a) * r, y: Math.sin(a) * r, vx: 0, vy: 0 }; G.heat = 1; }
+    return n;
+  });
+  const seen = new Set(), edges = [];
+  const add = (a, b, kind) => { const key = [a, b].sort().join("|"); if (!ids.has(a) || !ids.has(b) || a === b || seen.has(key)) return; seen.add(key); edges.push({ a, b, kind }); };
+  for (const n of G.nodes) { if (n.parent) add(n.slug, n.parent, "parent"); }
+  for (const n of G.nodes) { if (n.origin) add(n.slug, n.origin, "origin"); }
+  for (const n of G.nodes) for (const l of n.links || []) add(n.slug, l, "link");
+  G.edges = edges;
+}
+const radius = n => isBox(n) ? 9 + Math.min(8, kids(n).length) : 5 + Math.min(7, n.tasks.filter(t => !t.done).length * 0.9);
+function step() {
+  const N = G.nodes, P = G.pos;
+  for (let i = 0; i < N.length; i++) {
+    const a = P[N[i].slug];
+    for (let j = i + 1; j < N.length; j++) {
+      const b = P[N[j].slug]; let dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy || 0.01;
+      const f = Math.min(2600 / d2, 6), d = Math.sqrt(d2); dx /= d; dy /= d;
+      a.vx += dx * f; a.vy += dy * f; b.vx -= dx * f; b.vy -= dy * f;
+    }
+    a.vx -= a.x * 0.004; a.vy -= a.y * 0.004;
+  }
+  for (const e of G.edges) {
+    if (!G.show[e.kind]) continue;
+    const a = P[e.a], b = P[e.b], dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+    const want = e.kind === "parent" ? 70 : 120, f = (d - want) * (e.kind === "parent" ? 0.03 : 0.008);
+    a.vx += dx / d * f; a.vy += dy / d * f; b.vx -= dx / d * f; b.vy -= dy / d * f;
+  }
+  for (const n of N) { const p = P[n.slug]; if (G.drag === n.slug) { p.vx = p.vy = 0; continue; } p.vx *= 0.82; p.vy *= 0.82; p.x += p.vx * G.heat; p.y += p.vy * G.heat; }
+  G.heat = Math.max(0.03, G.heat * 0.992);
+}
+function drawGraph() {
+  const cv = $("graph"), box = $("graphbox"), dpr = window.devicePixelRatio || 1, w = box.clientWidth, h = box.clientHeight;
+  if (cv.width !== w * dpr || cv.height !== h * dpr) { cv.width = w * dpr; cv.height = h * dpr; }
+  const c = cv.getContext("2d"); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  c.translate(w / 2 + G.ox, h / 2 + G.oy); c.scale(G.k, G.k);
+  const near = new Set(); const focus = G.hover || selected;
+  if (focus) { near.add(focus); for (const e of G.edges) if (G.show[e.kind]) { if (e.a === focus) near.add(e.b); if (e.b === focus) near.add(e.a); } }
+  for (const e of G.edges) {
+    if (!G.show[e.kind]) continue;
+    const a = G.pos[e.a], b = G.pos[e.b], lit = focus && (e.a === focus || e.b === focus);
+    c.beginPath(); c.moveTo(a.x, a.y); c.lineTo(b.x, b.y);
+    c.setLineDash(e.kind === "origin" ? [5, 4] : e.kind === "link" ? [1, 4] : []);
+    c.strokeStyle = lit ? "rgba(200,220,245,.85)" : focus ? "rgba(130,155,185,.16)" : e.kind === "parent" ? "rgba(130,155,185,.38)" : "rgba(130,155,185,.24)";
+    c.lineWidth = (lit ? 1.6 : 1) / G.k; c.stroke();
+  }
+  c.setLineDash([]);
+  const labels = G.nodes.length <= 45 || G.k > 1.25;
+  for (const n of G.nodes) {
+    const p = G.pos[n.slug], r = radius(n), dim = focus && !near.has(n.slug);
+    c.globalAlpha = dim ? 0.45 : 1;
+    c.beginPath(); c.arc(p.x, p.y, r, 0, 6.283);
+    if (isBox(n)) { c.fillStyle = "#0d1218"; c.fill(); c.strokeStyle = "#e4ebf2"; c.lineWidth = 2 / G.k; c.stroke(); }
+    else { c.fillStyle = cssVar((STATUS[n.status] || { color: "#9aa8b8" }).color); c.fill(); }
+    if (n.slug === selected) { c.beginPath(); c.arc(p.x, p.y, r + 4, 0, 6.283); c.strokeStyle = "#8fc0ff"; c.lineWidth = 1.5 / G.k; c.stroke(); }
+    if (labels || isBox(n) || near.has(n.slug)) {
+      c.font = `${isBox(n) ? 600 : 500} ${(isBox(n) ? 13 : 11.5) / Math.max(G.k, 0.8)}px system-ui, sans-serif`;
+      c.fillStyle = isBox(n) ? "#e4ebf2" : "#a3b1c0"; c.textAlign = "center";
+      c.fillText(n.name || n.slug, p.x, p.y + r + 13 / Math.max(G.k, 0.8));
+    }
+    c.globalAlpha = 1;
+  }
+}
+function loop() { if (view === "graph") { step(); drawGraph(); } requestAnimationFrame(loop); }
+function graphPoint(ev) { const r = $("graph").getBoundingClientRect(); return { x: (ev.clientX - r.left - r.width / 2 - G.ox) / G.k, y: (ev.clientY - r.top - r.height / 2 - G.oy) / G.k }; }
+function hit(pt) { let best = null, bd = 1e9; for (const n of G.nodes) { const p = G.pos[n.slug], d = Math.hypot(p.x - pt.x, p.y - pt.y); if (d < radius(n) + 6 && d < bd) { best = n.slug; bd = d; } } return best; }
+function wireGraph() {
+  const cv = $("graph"); let moved = false;
+  cv.onpointerdown = e => { const pt = graphPoint(e), h = hit(pt); moved = false; cv.setPointerCapture(e.pointerId);
+    if (h) { G.drag = h; G.heat = Math.max(G.heat, 0.5); } else G.pan = { x: e.clientX - G.ox, y: e.clientY - G.oy }; };
+  cv.onpointermove = e => { const pt = graphPoint(e);
+    if (G.drag) { moved = true; G.pos[G.drag].x = pt.x; G.pos[G.drag].y = pt.y; G.heat = Math.max(G.heat, 0.4); }
+    else if (G.pan) { moved = true; G.ox = e.clientX - G.pan.x; G.oy = e.clientY - G.pan.y; }
+    else { G.hover = hit(pt); cv.style.cursor = G.hover ? "pointer" : "grab"; } };
+  cv.onpointerup = e => { if (G.drag && !moved) select(G.drag); G.drag = null; G.pan = null; };
+  cv.onpointerleave = () => { G.hover = null; };
+  cv.onwheel = e => { e.preventDefault(); G.k = Math.min(3, Math.max(0.3, G.k * (e.deltaY < 0 ? 1.1 : 0.9))); };
+}
+function renderGraphLegend() {
+  const kinds = [["parent", "belongs to", "solid"], ["origin", "idea came from", "dashed"], ["link", "mentions", "dotted"]];
+  $("glegend").innerHTML = kinds.map(([k, label, style]) => `<label><input type="checkbox" data-k="${k}" ${G.show[k] ? "checked" : ""}><i class="ln" style="border-top-style:${style}"></i>${label}</label>`).join("")
+    + `<label><input type="checkbox" data-k="done" ${G.show.done ? "checked" : ""}>show done</label>`
+    + Object.entries(STATUS).filter(([s]) => G.show.done || (s !== "done" && s !== "dropped")).map(([s, v]) => `<span><i style="background:${v.color}"></i> ${esc(v.label)}</span>`).join("")
+    + `<span><i style="background:var(--bg);border:2px solid var(--text)"></i> top node</span>`;
+  for (const cb of $("glegend").querySelectorAll("input")) cb.onchange = () => { G.show[cb.dataset.k] = cb.checked; store.set("gshow", G.show); G.heat = 1; graphData(); renderGraphLegend(); };
+}
+
+// ---------------------------------------------------------------- activity (the example chart: copy this to make your own)
+async function renderActivity() {
+  let data; try { data = await (await fetch("/api/activity")).json(); } catch (e) { return; }
+  const WEEKS = 12, iso = t => t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");   // local date, not UTC
+  const weekOf = d => { const t = new Date(d + "T00:00:00"); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return iso(t); };
+  const weeks = []; const start = new Date(weekOf(iso(new Date())) + "T00:00:00");
+  for (let i = WEEKS - 1; i >= 0; i--) { const t = new Date(start); t.setDate(t.getDate() - i * 7); weeks.push(iso(t)); }
+  const areas = sortKids(ROOTS).map(r => r.slug), sums = {}; for (const w of weeks) sums[w] = {};
+  for (const [day, per] of Object.entries(data.days || {})) { const w = weekOf(day); if (!sums[w]) continue;
+    for (const [slug, c] of Object.entries(per)) { const n = BY[slug]; const a = n ? topOf(n).slug : "(other)"; sums[w][a] = (sums[w][a] || 0) + c; } }
+  const all = areas.concat(Object.values(sums).some(s => s["(other)"]) ? ["(other)"] : []);
+  const color = a => AREA_COLORS[all.indexOf(a) % AREA_COLORS.length];
+  const max = Math.max(1, ...weeks.map(w => all.reduce((t, a) => t + (sums[w][a] || 0), 0)));
+  const W = 900, H = 300, L = 34, B = 26, bw = (W - L) / WEEKS;
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Changelog entries per week by top node">`;
+  for (let i = 0; i <= 4; i++) { const v = Math.round(max * i / 4), y = H - B - (H - B - 10) * i / 4;
+    svg += `<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="#1a2531"/><text x="${L - 6}" y="${y + 4}" text-anchor="end" font-size="11" fill="#74849a">${v}</text>`; }
+  weeks.forEach((w, i) => { let y = H - B;
+    for (const a of all) { const v = sums[w][a] || 0; if (!v) continue; const h = (H - B - 10) * v / max; y -= h;
+      svg += `<rect x="${L + i * bw + 5}" y="${y}" width="${bw - 10}" height="${Math.max(h - 1.5, 1)}" rx="3" fill="${color(a)}"><title>${esc((BY[a] && BY[a].name) || a)}: ${v} (week of ${w})</title></rect>`; }
+    svg += `<text x="${L + i * bw + bw / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#74849a">${w.slice(5)}</text>`; });
+  $("activity").innerHTML = svg + "</svg>";
+  $("alegend").innerHTML = all.map(a => `<span><i style="background:${color(a)}"></i> ${esc((BY[a] && BY[a].name) || a)}</span>`).join("");
+}
+
+// ---------------------------------------------------------------- views + polling
+const VIEWS = { tree: renderTree, graph: () => { graphData(); renderGraphLegend(); }, activity: renderActivity };
+function show(v) {
+  view = VIEWS[v] ? v : "tree"; store.set("view", view);
+  for (const b of $("tabs").querySelectorAll(".tab")) b.setAttribute("aria-selected", b.dataset.view === view);
+  for (const name of Object.keys(VIEWS)) $("view-" + name).hidden = name !== view;
+  VIEWS[view]();
+}
+async function poll() {
+  try {
+    const d = await (await fetch("/api/tree")).json();
+    if (d.error) throw new Error(d.error);
+    const changed = JSON.stringify(d) !== JSON.stringify(DATA);
+    $("live").classList.remove("off"); $("live").lastElementChild.textContent = "live";
+    if (changed) { DATA = d; index(); VIEWS[view](); renderPanel(); }
+  } catch (e) { $("live").classList.add("off"); $("live").lastElementChild.textContent = "not connected"; }
+}
+$("title").textContent = TITLE; document.title = TITLE;
+for (const b of $("tabs").querySelectorAll(".tab")) b.onclick = () => show(b.dataset.view);
+wireGraph(); show(view); poll(); setInterval(poll, POLL_MS); requestAnimationFrame(loop);
+</script>
+</body>
+</html>
