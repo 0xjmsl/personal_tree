@@ -7,7 +7,7 @@ A fire starts with no memory of earlier ones: this page, `wiki/assistant/notes.m
 ## Every fire, in this order
 
 1. **What needs the user.** Read the tree (`python scripts/work_tree.py --json`): the `next:` lines of threads that are `doing` or `waiting-you`, the `⏳` tasks, and `threads/chores.md`. If something has a date that is today or past, or has been waiting on the user for more than <N> days, say it in one or two lines.
-2. **The night's jobs.** <List each scheduled job, and where its result is: its last exit code (`python scripts/marcha.py schedules`, if marcha's API is on) or the file it writes. Example: the backup writes `E:\backup\backup.log`.> Speak only if one failed or did not run.
+2. **The night's jobs.** <List each scheduled job, and where its result is: its last exit code (`python scripts/marcha.py schedules`, if marcha's API is on and the signing key is set up) or the file it writes. Example: the backup writes `E:\backup\backup.log`.> Speak only if one failed or did not run.
 3. **One piece of quiet work**, if 1 and 2 had nothing: take the oldest line under "Observations" or "Worth looking up" in `wiki/assistant/notes.md` and do it, or tidy one stale thread's Summary, or fill one gap in the wiki. Log it in the changelog like any other work.
 4. **One question**, if a line has been waiting under "Questions for the user" in the notes: ask it. Only one per fire.
 5. **Nothing to say:** answer exactly `[NO_REPLY]`.

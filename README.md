@@ -29,7 +29,7 @@ The assistant asks a few questions and builds your tree with you. `START_HERE.md
 
 The method and the dashboard need only Python (3.9 or newer). The optional pieces (`STACK.md`, `MARCHA.md`, `TEAM.md`) run on Windows, need a PublicOS account for the phone app, and use three programs, each with its own instructions:
 
-- **marcha**: a Windows launcher that keeps the programs running in one window. https://github.com/0xjmsl/marcha/releases
+- **marcha**: a Windows launcher that keeps the programs running in one window. https://github.com/0xjmsl/marcha/releases (1.0.1 or newer; if you turn on its local API, use signed requests, as `MARCHA.md` shows)
 - **xmtp_daemon**: the bridge to the messaging network; one inbox online. https://github.com/0xjmsl/xmtp_daemon
 - **gpette**: decides who gets answered and runs the model. https://github.com/0xjmsl/gpette
 

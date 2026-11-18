@@ -63,14 +63,22 @@ Use it for anything that needs no thinking, because it costs nothing to run:
 
 ## 3. The local API: the assistant can drive marcha
 
-**Read this before turning it on.** The API has no password. While it is on, anything on this PC can use it, and that includes a web page open in a browser on this PC: it could start saved tasks, type into a running terminal, or create a scheduled job that runs any command. So:
+**Security first: use signed requests.** The API can do what the user can do in marcha's window: start saved tasks, type into a running terminal, create a scheduled job that runs any command. By itself it has no password, so anything on this PC could use it. We recommend, and use ourselves, **signed requests**: marcha then answers only requests signed by a key the user has allowed, and nobody else.
 
-- Leave it off unless you use it. Everything else on this page works without it.
-- If you turn it on, tell the user what that means, and in the API screen's **Endpoints** list switch off what you do not need. For looking only, keep the `get_...` ones and switch off the rest, above all `upsert_schedule`, `run_schedule` and `input_task`.
+Use marcha **1.0.1 or newer**. Older builds also answered web pages open in a browser on the same PC; 1.0.1 refuses those always, signed or not.
 
-To turn it on: **API** in the left bar, the switch under Server. It then reads "Running on 127.0.0.1:7832". Leave "Allowed Addresses" empty; this kit's script does not sign its requests.
+Set it up in this order, with the user:
 
-The kit has a small command for it, `scripts/marcha.py` (Python only, nothing to install):
+1. `pip install eth-account` (the one package signing needs), then `python scripts/marcha.py newkey`. It makes a key file in the user's home folder (`.marcha_api_key`; it never leaves the PC and is not shown) and prints an address.
+2. In marcha: **API** in the left bar. Paste that address under **Allowed Addresses**. Then the switch under Server; it reads "Running on 127.0.0.1:7832".
+3. `python scripts/marcha.py tasks` must answer. Then prove the lock: rename the key file for a moment and run it again; it must be refused ("signed requests only"). Put the file back.
+4. In the same screen's **Endpoints** list, switch off what you will not use.
+
+Tell the user what was turned on and why, and write in `wiki/tools.md` where the key file is (the place, not the content). The key is only for marcha; it is not an account anywhere. If the file is lost, make a new one and swap the address.
+
+Leave the API off if nothing uses it. Everything else on this page works without it.
+
+The kit's command for it is `scripts/marcha.py`. Once a key exists it signs every request by itself:
 
 ```
 python scripts/marcha.py templates              the saved tasks and their ids
@@ -85,6 +93,8 @@ python scripts/marcha.py stop <id>              Ctrl+C
 python scripts/marcha.py kill <id>              end it and what it started
 python scripts/marcha.py input <id> "text"      type into its terminal
 python scripts/marcha.py restart <id>:<seconds to wait after ending it>:<seconds to wait after starting it> ...
+python scripts/marcha.py newkey                 make the signing key (once); prints the address to allow
+python scripts/marcha.py address                the address of the signing key
 ```
 
 What this gives the assistant:
@@ -96,6 +106,7 @@ What this gives the assistant:
 
 Rules:
 
+- The key file lets whoever holds it drive marcha. It stays in the user's home folder, out of this tree and out of anything synced or shared.
 - Launch, input, stop, kill and restart change what is running: get the user's go, unless they have told you a specific one is always fine (write that in `wiki/tools.md`).
 - Creating or changing a scheduled job is done with the user, in the Scheduled screen.
 

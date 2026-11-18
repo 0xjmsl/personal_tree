@@ -15,7 +15,7 @@ Record every choice, path and port in `wiki/tools.md` as you go (never a key or 
 
 A Windows task launcher: it keeps long-running programs in one window, each in its own terminal, and starts them with one click.
 
-1. Download the newest `marcha-windows-x64-*.zip` from https://github.com/0xjmsl/marcha/releases and unzip it somewhere permanent (for example `C:\Tools\marcha`).
+1. Download the newest `marcha-windows-x64-*.zip` (1.0.1 or newer) from https://github.com/0xjmsl/marcha/releases and unzip it somewhere permanent (for example `C:\Tools\marcha`).
 2. Run `marcha.exe`. Windows may show a SmartScreen prompt because the build is not code-signed: "More info", then "Run anyway".
 3. With the user, add a task for the dashboard (the **+** button in My Tasks):
    - Name: `My tree`
@@ -27,7 +27,7 @@ A Windows task launcher: it keeps long-running programs in one window, each in i
 
 Later pieces add two more tasks (the daemon and gpette). Put the three in one group so "Run All" starts everything.
 
-marcha does much more than start three programs: scheduled jobs (a nightly backup of this folder is the best first one), a local API the assistant can use to look at and restart tasks, and the way it pairs with the assistant's own timers. Read `MARCHA.md` once the stack works, and offer the user the ideas there one at a time.
+marcha does much more than start three programs: scheduled jobs (a nightly backup of this folder is the best first one), a local API the assistant can use to look at and restart tasks (with signed requests, which we recommend), and the way it pairs with the assistant's own timers. Read `MARCHA.md` once the stack works, and offer the user the ideas there one at a time.
 
 ## 2. A PublicOS account for the user
 

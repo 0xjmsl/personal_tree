@@ -20,16 +20,28 @@ Usage:
     python marcha.py restart ID[:KILL_S[:START_S]] ... # orchestrated restart with delays
     python marcha.py schedules                      # scheduled jobs: next fire, last run and its exit code
     python marcha.py runs JOB_ID                    # a job's recent runs
+    python marcha.py newkey                         # make a signing key; prints the address for Allowed Addresses
+    python marcha.py address                        # the address of the signing key
 
 SLOT TYPE values: empty, tasksList, history, terminal, resources
     (terminal and resources require an ID argument)
 
 Default: http://127.0.0.1:7832  (override with MARCHA_PORT env var)
 The API is off until you turn it on in Marcha: API in the left bar, the switch under Server.
+
+Signed requests (recommended, Marcha 1.0.1 or newer): run `newkey` once, paste the address it
+prints into Marcha's API screen under Allowed Addresses. From then on every request is signed
+and Marcha answers nobody else. Signing needs one package: pip install eth-account.
+The key is a file, ~/.marcha_api_key (override with MARCHA_KEY_FILE); keep it out of any folder
+that is synced or shared. With no key file, requests go unsigned, which only works while
+Allowed Addresses is empty.
 """
 
 import argparse
 import json
+import os
+import re
+import secrets
 import sys
 import time
 import urllib.request
@@ -51,50 +63,123 @@ def get_base():
     return f"{BASE}:{port}"
 
 
+# --- Signing ---
+
+KEY_FILE = os.environ.get("MARCHA_KEY_FILE") or os.path.join(os.path.expanduser("~"), ".marcha_api_key")
+
+# (method, path pattern) -> the action Marcha expects for that endpoint.
+ROUTES = [
+    ("GET", r"/api/state", "get_state"),
+    ("GET", r"/api/tasks", "get_tasks"),
+    ("GET", r"/api/tasks/[^/]+", "get_task"),
+    ("POST", r"/api/tasks/[^/]+/run", "run_task"),
+    ("POST", r"/api/tasks/[^/]+/stop", "stop_task"),
+    ("POST", r"/api/tasks/[^/]+/kill", "kill_task"),
+    ("POST", r"/api/tasks/[^/]+/input", "input_task"),
+    ("GET", r"/api/templates", "get_templates"),
+    ("POST", r"/api/templates/reload", "reload_templates"),
+    ("POST", r"/api/templates/[^/]+/launch", "launch_template"),
+    ("GET", r"/api/layout", "get_layout"),
+    ("POST", r"/api/layout/assign", "assign_layout"),
+    ("GET", r"/api/history", "get_history"),
+    ("GET", r"/api/logs/[^/]+", "get_log"),
+    ("GET", r"/api/resources/[^/]+", "get_resources"),
+    ("POST", r"/api/restart", "restart_tasks"),
+    ("GET", r"/api/debug/log", "get_debug_log"),
+    ("GET", r"/api/schedules", "get_schedules"),
+    ("POST", r"/api/schedules", "upsert_schedule"),
+    ("POST", r"/api/schedules/[^/]+/run", "run_schedule"),
+    ("GET", r"/api/schedules/[^/]+/runs", "get_schedule_runs"),
+]
+
+
+def _eth():
+    try:
+        from eth_account import Account
+        from eth_account.messages import encode_defunct
+        return Account, encode_defunct
+    except ImportError:
+        print("Signing needs one package:  pip install eth-account")
+        sys.exit(1)
+
+
+def _account():
+    """The signing account, or None when there is no key file (requests then go unsigned)."""
+    if not os.path.isfile(KEY_FILE):
+        return None
+    Account, _ = _eth()
+    with open(KEY_FILE, encoding="utf-8") as f:
+        return Account.from_key(f.read().strip())
+
+
+def envelope(method, path, data=None):
+    """The signed request Marcha checks: one action, one path, one nonce, once."""
+    acct = _account()
+    if acct is None:
+        return None
+    _, encode_defunct = _eth()
+    path = path.split("?", 1)[0]
+    action = next((a for m, pat, a in ROUTES if m == method and re.fullmatch(pat, path)), None)
+    if action is None:
+        print(f"No Marcha endpoint for {method} {path}")
+        sys.exit(1)
+    data = data or {}
+    client = acct.address.lower()
+    ts = int(time.time())
+    nonce = secrets.token_hex(16)
+    # These six keys, in this order, as compact JSON: what Marcha rebuilds and hashes.
+    message = json.dumps({"action": action, "client": client, "data": data, "nonce": nonce, "path": path, "timestamp": ts},
+                         separators=(",", ":"), ensure_ascii=False)
+    sig = acct.sign_message(encode_defunct(text=message)).signature.hex()
+    if not sig.startswith("0x"):
+        sig = "0x" + sig
+    return {"timestamp": ts, "action": action, "path": path, "nonce": nonce,
+            "data": data, "client": client, "signature": sig}
+
+
 # --- HTTP helpers ---
 
-def api_get(path):
-    url = f"{get_base()}{path}"
-    req = urllib.request.Request(url, method="GET")
-    req.add_header("Accept", "application/json")
+def _send(req):
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
         body = e.read().decode()
         try:
-            err = json.loads(body)
-            print(f"Error {e.code}: {err.get('error', body)}")
-        except json.JSONDecodeError:
-            print(f"Error {e.code}: {body}")
+            body = json.loads(body).get("error", body)
+        except (json.JSONDecodeError, AttributeError):
+            pass
+        print(f"Error {e.code}: {body}")
+        if e.code == 401 and "Missing X-Signed-Request" in str(body):
+            print("Marcha accepts signed requests only. Run `newkey` and add its address to Allowed Addresses.")
+        if e.code == 403 and "not allowed" in str(body):
+            print("This key's address is not in Marcha's Allowed Addresses (run `address` to see it).")
         sys.exit(1)
     except urllib.error.URLError as e:
         print(f"Connection failed: {e.reason}")
         print("Is Marcha running with the API server enabled?")
         sys.exit(1)
+    except json.JSONDecodeError:
+        print("Marcha answered with something that is not JSON.")
+        sys.exit(1)
+
+
+def api_get(path):
+    req = urllib.request.Request(f"{get_base()}{path}", method="GET")
+    req.add_header("Accept", "application/json")
+    env = envelope("GET", path)
+    if env is not None:
+        req.add_header("X-Signed-Request", json.dumps(env, separators=(",", ":"), ensure_ascii=False))
+    return _send(req)
 
 
 def api_post(path, data=None):
-    url = f"{get_base()}{path}"
-    body = json.dumps(data or {}).encode()
-    req = urllib.request.Request(url, data=body, method="POST")
+    env = envelope("POST", path, data)
+    body = json.dumps(env if env is not None else (data or {}), separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(f"{get_base()}{path}", data=body, method="POST")
     req.add_header("Content-Type", "application/json")
     req.add_header("Accept", "application/json")
-    try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return json.loads(resp.read().decode())
-    except urllib.error.HTTPError as e:
-        body = e.read().decode()
-        try:
-            err = json.loads(body)
-            print(f"Error {e.code}: {err.get('error', body)}")
-        except json.JSONDecodeError:
-            print(f"Error {e.code}: {body}")
-        sys.exit(1)
-    except urllib.error.URLError as e:
-        print(f"Connection failed: {e.reason}")
-        print("Is Marcha running with the API server enabled?")
-        sys.exit(1)
+    return _send(req)
 
 
 # --- Formatters ---
@@ -340,6 +425,30 @@ def cmd_schedules(_args):
         print("    " + str(j.get("command")))
 
 
+def cmd_newkey(_args):
+    if os.path.exists(KEY_FILE):
+        print(f"A key already exists at {KEY_FILE}. Its address:")
+        print(_account().address)
+        return
+    Account, _ = _eth()
+    acct = Account.create()
+    key = acct.key.hex()
+    with open(KEY_FILE, "w", encoding="utf-8") as f:
+        f.write(key if key.startswith("0x") else "0x" + key)
+    try:
+        os.chmod(KEY_FILE, 0o600)
+    except OSError:
+        pass
+    print(f"Key written to {KEY_FILE} (keep this file private; it is not shown here).")
+    print("Add this address in Marcha: API, Allowed Addresses:")
+    print(acct.address)
+
+
+def cmd_address(_args):
+    acct = _account()
+    print(acct.address if acct else f"No key yet ({KEY_FILE}). Run: newkey")
+
+
 def cmd_runs(args):
     data = api_get(f"/api/schedules/{args.job_id}/runs")
     runs = data if isinstance(data, list) else data.get("runs", [])
@@ -423,6 +532,8 @@ def main():
 
     sub.add_parser("log", help="Debug request log (last 100 entries)")
     sub.add_parser("schedules", help="Scheduled jobs")
+    sub.add_parser("newkey", help="Make a signing key and print its address")
+    sub.add_parser("address", help="The signing key's address")
     p = sub.add_parser("runs", help="A scheduled job's recent runs")
     p.add_argument("job_id")
 
@@ -448,6 +559,8 @@ def main():
         "log": cmd_debug_log,
         "schedules": cmd_schedules,
         "runs": cmd_runs,
+        "newkey": cmd_newkey,
+        "address": cmd_address,
     }
 
     commands[args.command](args)
