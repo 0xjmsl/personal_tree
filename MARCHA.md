@@ -69,7 +69,7 @@ Use marcha **1.0.1 or newer**. Older builds also answered web pages open in a br
 
 Set it up in this order, with the user:
 
-1. `pip install eth-account` (the one package signing needs), then `python scripts/marcha.py newkey`. It makes a key file in the user's home folder (`.marcha_api_key`; it never leaves the PC and is not shown) and prints an address.
+1. `python -m pip install --user eth-account` (the one package signing needs; `--user` keeps it out of the system-wide install, and `python` is the command noted in `wiki/tools.md`), then `python scripts/marcha.py newkey`. It makes a key file in the user's home folder (`.marcha_api_key`; it never leaves the PC and is not shown) and prints an address.
 2. In marcha: **API** in the left bar. Paste that address under **Allowed Addresses**. Then the switch under Server; it reads "Running on 127.0.0.1:7832".
 3. `python scripts/marcha.py tasks` must answer. Then prove the lock: rename the key file for a moment and run it again; it must be refused ("signed requests only"). Put the file back.
 4. In the same screen's **Endpoints** list, switch off what you will not use.

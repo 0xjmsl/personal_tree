@@ -21,7 +21,7 @@ Ask one more thing here, because it shapes the rest of the interview: how do the
 
 ### Step 1. Check Python
 
-Run `python --version` (on Windows also try `py --version`; on macOS or Linux, `python3 --version`). You need 3.9 or newer. If it is missing, help them install it from python.org (tick "Add python.exe to PATH") and check again. Note in `wiki/tools.md` which command works on this machine (`python`, `py` or `python3`). If it is not `python`, replace `python` with it at the start of every command in `CLAUDE.md` (the dashboard command and the clock command), `wiki/tools.md`, `wiki/assistant/assistant.md`, `.claude/skills/open-thread/SKILL.md` and the troubleshooting lines at the end of this page, so that later conversations run commands that work.
+Run `python --version` (on Windows also try `py --version`; on macOS or Linux, `python3 --version`). You need 3.9 or newer. If it is missing, help them install it from python.org (tick "Add python.exe to PATH") and check again. Note in `wiki/tools.md` which command works on this machine (`python`, `py` or `python3`). If it is not `python`, replace `python` with it at the start of every command in `CLAUDE.md` (the dashboard command and the clock command), `wiki/tools.md`, `wiki/assistant/assistant.md`, `.claude/skills/open-thread/SKILL.md` and the troubleshooting lines at the end of this page, so that later conversations run commands that work. `STACK.md`, `MARCHA.md` and `TEAM.md` also say `python`: leave them as they are, and read every `python` there as the command noted in `wiki/tools.md`.
 
 ### Step 2. The interview: their top nodes
 

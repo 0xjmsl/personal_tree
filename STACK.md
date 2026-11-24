@@ -1,12 +1,12 @@
 # The stack (optional)
 
-**For the assistant.** Part 2 of the install. Everything here is optional. Pieces 1 and 2 stand on their own; 3 needs 2, and uses 1 as a convenience. Do them in this order and check each one works before the next. Explain to the user what a piece is for before you install it.
+**For the assistant.** Part 2 of the install. Everything here is optional. Pieces 1 and 2 stand on their own; 3 needs a way for the user to message it (2, or any other XMTP app) and uses 1 to keep it running. Do them in this order and check each one works before the next. Explain to the user what a piece is for before you install it.
 
 | Piece | What it gives them | Needs |
 |---|---|---|
 | 1. marcha | One window that starts and shows the dashboard and the other programs | Windows |
 | 2. A PublicOS account | Their own identity on the network, and the phone app | A phone |
-| 3. The private assistant | They message their assistant from the phone; it works in this folder on their PC | 1 and 2, the `claude` command line, Python 3.11+ |
+| 3. The private assistant | They message their assistant from the phone; it works in this folder on their PC | 2 (or another XMTP app), the `claude` command line, Python 3.11+, Git for Windows; 1 recommended |
 | 4. PublicOS skills | Their assistant can read and post on PublicOS for them | 2 |
 
 Record every choice, path and port in `wiki/tools.md` as you go (never a key or a password).
@@ -16,7 +16,7 @@ Record every choice, path and port in `wiki/tools.md` as you go (never a key or 
 A Windows task launcher: it keeps long-running programs in one window, each in its own terminal, and starts them with one click.
 
 1. Download the newest `marcha-windows-x64-*.zip` (1.0.1 or newer) from https://github.com/0xjmsl/marcha/releases and unzip it somewhere permanent (for example `C:\Tools\marcha`).
-2. Run `marcha.exe`. Windows may show a SmartScreen prompt because the build is not code-signed: "More info", then "Run anyway".
+2. Run `marcha.exe` (it is in the `marcha` folder inside the zip). Windows may show a SmartScreen prompt because the build is not code-signed: "More info", then "Run anyway".
 3. With the user, add a task for the dashboard (the **+** button in My Tasks):
    - Name: `My tree`
    - Command: the Python command that works on this machine (`python` or `py`)
@@ -36,7 +36,8 @@ PublicOS is a social network where each person holds their own account and keys.
 - The public guide for agents, https://publicos.dev/agents, explains how to find an account by its exact name and read a profile, with no key needed. Use it for every lookup here.
 - **Ask first whether they already have an account.** If they do, ask for its **name**, look it up, and confirm with the user that the profile you found is theirs before you rely on it.
 - **If they do not:** they install the PublicOS app on their phone (the links are at https://publicos.dev/library/get-publicos/) and create their account in it.
-- Some accounts are *citizens*: verified people. A citizen can create accounts for others; that matters in 3a, for the assistant's own account. Find out from the chain whether the user is one, as the guide shows, not by guessing.
+- Words you will meet: every account starts *private*; a private account whose holder has been verified as a real person (other citizens vouch for them) becomes a *citizen*. A citizen can create accounts for others; that matters in 3a, for the assistant's own account. Find out from the chain whether the user is one, as the guide shows, not by guessing.
+- **PublicOS is not required for the messaging itself.** The assistant's inbox is a plain XMTP address, so any XMTP app can write to it. We use the PublicOS app; if the user prefers another XMTP app, skip to piece 3 and have them start a direct message to the assistant's address from that app.
 - **The recovery words of the account are theirs alone.** Never ask for them, never store them, and tell the user to write them on paper.
 
 You need one thing from this step for piece 3: the user's **inbox id**, the identifier their messages come from. Step 3e shows the simplest way to get it.
@@ -52,20 +53,21 @@ Two small programs run on the user's PC:
 - **xmtp_daemon** is the bridge to the messaging network: it keeps one inbox online, the assistant's. https://github.com/0xjmsl/xmtp_daemon
 - **gpette** decides who gets answered and runs Claude for them. https://github.com/0xjmsl/gpette
 
-Read both READMEs, both `AGENTS.md` files and gpette's `docs/manual.html` before you start. What follows is the shape for this kit, not a replacement for them.
+Read both READMEs before you start (in gpette's: how a message is routed, profiles, gates, `/menu` and timers; in the daemon's: running it and where it keeps its key). Their `AGENTS.md` files and gpette's `docs/manual.html` are for when something does not behave as described here, or the user wants more than this page sets up. What follows is the shape for this kit, not a replacement for them.
 
 ### 3a. The assistant gets its own identity
 
 The assistant is not the user. It has its own inbox, made from its own key, which the daemon creates on its first run (`secrets/bot.key`, with `secrets/db.key` for its database). **Both files are secrets: back them up with the user, and never print them.**
 
-If the user wants the assistant to have a PublicOS profile too (a name and a robot badge, so it shows up as a contact): that is a second account, its own, and it **must be marked as automated**. The agents guide ("Get an account") has the exact steps and two ways to do it. If the user is a citizen: the assistant signs a consent with its own key and the user sends the transaction from their own account (the guide's "from a citizen" route). If not: the public sign-up door the guide describes, which needs an e-mail address and makes one account per address. Work through the guide together, one step at a time, and tell the user what each signature does before anything is signed. If something in the guide does not match what you see, stop and tell the user exactly where. It works without a profile as well: the user can message the assistant's address directly.
+If the user wants the assistant to have a PublicOS profile too (a name and a robot badge, so it shows up as a contact): that is a second account, its own, and it **must be marked as automated** (the record `automated_account` = `true` on its profile, written before it does anything else; the guide's `record.js automated` does it). The agents guide ("Get an account") has the exact steps and two ways to do it. If the user is a citizen: the assistant signs a consent with its own key and the user sends the transaction from their own account (the guide's "from a citizen" route). If not: the public sign-up door the guide describes, which needs an e-mail address and makes one account per address. Work through the guide together, one step at a time, and tell the user what each signature does before anything is signed. If something in the guide does not match what you see, stop and tell the user exactly where. It works without a profile as well: the user can message the assistant's address directly.
 
 ### 3b. Install
 
 1. The Claude Code command line: `claude --version` must work in a terminal. If not, install it with the user (https://claude.com/claude-code) and sign in.
 2. Python 3.11 or newer.
-3. **xmtp_daemon**: use the downloadable build from its releases page (`xmtp_daemon-windows-x64-*.zip`). Unzip it into its own permanent folder outside this one, for example `C:\Tools\xmtp_daemon`. Keep the `.dll` files beside the `.exe`. If there is only source, building needs Rust and, on Windows, Strawberry Perl, and takes several minutes: tell the user before you start.
-4. **gpette**: download or clone it outside this folder, for example `C:\Tools\gpette`. Give it its own Python environment, so nothing is installed system-wide:
+3. Git for Windows (https://git-scm.com/download/win). Claude Code on Windows runs its commands in Git Bash, so the assistant on the phone needs it (3h relies on it). `git --version` must work.
+4. **xmtp_daemon**: use the downloadable build from its releases page, https://github.com/0xjmsl/xmtp_daemon/releases (`xmtp_daemon-windows-x64-*.zip`). Unzip it into its own permanent folder outside this one, for example `C:\Tools\xmtp_daemon`. Keep the `.dll` files beside the `.exe`. If there is only source, building needs Rust and, on Windows, Strawberry Perl, and takes several minutes: tell the user before you start.
+5. **gpette**: download or clone it outside this folder (https://github.com/0xjmsl/gpette), for example `C:\Tools\gpette`. Give it its own Python environment, so nothing is installed system-wide:
    ```
    cd <gpette folder>
    python -m venv .venv          (the Python command noted in wiki/tools.md: python or py)
@@ -121,7 +123,8 @@ workdir = "C:/Users/ana/Documents/my_tree"    # REPLACE with this folder's real 
 allowed_tools = ["Read", "Glob", "Grep", "Bash", "Edit", "Write"]
 privacy = false                    # the owner may be told file names and paths; without it the assistant refuses its own user
 sessions = "shared"
-admin = true
+menu = true                        # /menu: status, model, sessions, pause the timers (MARCHA.md and TEAM.md use it)
+admin = true                       # other profiles may wake this one; grants nothing else
 ```
 
 - **Never** set `[gate] kind = "open"`, and never add an inbox to `members` that the user did not give you themselves. If they later want a friend or a partner to reach the assistant, that is a separate profile with its own folder and no tools; read gpette's manual.
