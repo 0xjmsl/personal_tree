@@ -59,6 +59,7 @@ The people who made this changed their own setup every week for months, and stil
 - **Drop what you don't use.** If chores never get used, delete the section. If the changelog feels too detailed, tell the assistant what level you want.
 - **Review it.** Every week or two, look at the tree with the assistant and ask: what is stale, what should be closed, what should be split?
 - **Change the rules.** The rules live in `CLAUDE.md` and `wiki/workflow.md`. When something annoys you twice, say so, and have the assistant rewrite the rule.
+- **Expect the assistant to speak up.** About every two weeks it checks how this way of working is doing, and it is told to say so plainly when something is not working, with one change to try. Test the change, then keep it or undo it. The best way to work is one the two of you find, not this one.
 
 The only part worth protecting is the habit underneath: **write it down where the next conversation will find it.**
 

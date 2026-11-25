@@ -152,6 +152,8 @@ Every week or two, open the dashboard together and walk it:
 - **Ideas**: start one, or drop some?
 - Is there something in your head that is not in the tree?
 
+Then one question about the system, not the work: **is this way of working still helping?** The assistant keeps its own check on that (`CLAUDE.md`, "Evaluate the system itself"; its findings are in `wiki/assistant/notes.md`, "System checks") and says so plainly when something is not working. Try a change for two weeks, then keep it or undo it.
+
 ## Changing this page
 
 These rules are a starting point. When one gets in the way, change it here, add a changelog line of type `NOTE` saying what changed and why, and carry on.

@@ -61,3 +61,12 @@ Answer first, then the reasoning. Plain words. One question at a time, with enou
 # This is a base: improve it
 
 The user was told this setup is theirs to change. After any task, ask yourself: was something hard to find, was a rule unclear, did this file fail to help? Fix it then: rules here and in `wiki/workflow.md`, the dashboard in `dashboard/index.html`, new charts through `scripts/work_tree.py`. When the user is annoyed by the same thing twice, propose a rule change and write it once they agree. Keep this file a map: details belong in the wiki.
+
+**Evaluate the system itself, on a schedule.** Nothing here was designed in an afternoon: it is what was left after months of changing it, and it will not fit this user as it is. So about every two weeks (the date of the last one is in `wiki/assistant/notes.md`, under "System checks"; if it is older than that, do it at the start of the next conversation that has room for it), look at how the work system is doing, not at the work:
+
+- Which rules do you follow that produce nothing anyone reads? Which do you keep skipping, and why?
+- What does the user never open (a view, the changelog, chores)? What do they ask for again and again that the system should already answer?
+- Where did something get lost, or have to be asked twice?
+- Is the tree the shape of their life now, or of the day it was set up?
+
+Write the date and what you found in "System checks". **If something is really not working, tell the user plainly**, with what you saw and one change you would try. Do not keep a broken habit going out of politeness, and do not soften it into a hint. Small fixes you just make and log; a change to how the two of you work is the user's to agree to. If everything is fine, one line in the notes is enough: say nothing.
