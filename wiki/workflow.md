@@ -63,9 +63,29 @@ Mentioning another thread as `[[threads/<slug>/thread|name]]` anywhere in the bo
 3. Copy `threads/_templates/thread.md`, fill the header, write the first lines of Summary and Tasks.
 4. Add a changelog line that links it.
 
-### Splitting and tidying
+### Leaves and parents
 
-A thread with several separate pieces of work gets child threads (`parent: <this slug>`). Check for this whenever a branch is reviewed. Tidy often: it is cheaper than one big cleanup.
+Every task lives at a leaf. A thread is one of two things, never both:
+
+| | **Leaf** | **Parent** |
+|---|---|---|
+| What it is | one defined piece of work | a branch: its work has split into child threads |
+| `status:` | `idea` · `doing` · `waiting-you` · `blocked` · `parked` | **empty** (the dashboard reads it as a container and counts the children, like a top node) |
+| `## Tasks` | the open checkboxes | **no open checkbox**. Done ones stay as history |
+| `next:` | the next action | one line naming the children |
+| `## Summary` | the story of the work | the story of the whole, and one line per child (what it is, where it stands) |
+| Closes when | its tasks are done | every child is closed |
+
+- **The moment a thread gets a child, ALL its open tasks leave it in the same sitting.** Not only the tasks of the new child: every open task is sorted into a child thread, grouped into pieces of work that make sense alone. No pile of leftovers stays on the parent.
+- **A leaf is a defined piece of work.** Its header answers why (`why:`), what (`name:` and the first line of the Summary), when (`opened:`) and what next (`next:`). A leaf whose tasks are about two different subjects is two leaves.
+- **A one-action leftover is a chore**, not a thread (`threads/chores.md`).
+- **A child of a thread that closes moves up** to that thread's parent, unless the whole family closes together.
+
+Why: everything the tree shows as being worked on is then a real, defined piece of work. A parent that also carries its own tasks reads as "is this done or not?", and its loose tasks get lost under the children.
+
+### Tidying
+
+Check the leaf rule whenever a branch is reviewed: a leaf whose tasks have drifted onto two subjects gets split. Tidy often: it is cheaper than one big cleanup.
 
 ### Closing
 
@@ -128,7 +148,7 @@ Every week or two, open the dashboard together and walk it:
 
 - **Waiting on you**: can any be answered now?
 - **Doing** threads not touched in weeks: still doing, or parked?
-- Threads with many tasks: split?
+- Threads with many tasks: split? Any parent still holding open tasks: move them down.
 - **Ideas**: start one, or drop some?
 - Is there something in your head that is not in the tree?
 

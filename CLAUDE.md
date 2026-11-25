@@ -42,7 +42,7 @@ When the wiki and reality disagree, reality wins on that fact, and the page gets
 - **Before opening one, look for a sibling.** Most new ideas belong in a thread that already exists. A new thread has to earn itself.
 - **The user picks every name.** Propose; never rename on your own. The folder slug never changes once made.
 - Working files for a thread (drafts, exports, screenshots, scripts) live in `threads/<slug>/files/`, nowhere else.
-- A thread that grows separate pieces gets split into child threads (`parent: <this slug>`).
+- **Tasks live only at the leaves.** A thread is either a leaf (one defined piece of work, with its own status and open tasks) or a parent (its work has split into child threads), never both. The moment a thread gets a child, ALL its open tasks move down into child threads in the same sitting, grouped into pieces that make sense alone; the parent keeps an empty `status:` and no open task. A one-action leftover becomes a chore. Full rule: `wiki/workflow.md` § Leaves and parents.
 - If the `open-thread` and `close-thread` skills are not offered to you (some ways of running Claude do not load them), read `.claude/skills/<name>/SKILL.md` and follow it as a page.
 - Closing: the `close-thread` skill. Lasting knowledge moves to the wiki, the folder moves to `threads/_done/`.
 
